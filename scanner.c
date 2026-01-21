@@ -1,6 +1,10 @@
 #include "scanner.h"
 
 // --- THE SCANNER ---
+/**
+ * Internal state of the scanner.
+ * Tracks the current position in the source code.
+ */
 typedef struct {
     const char* start;
     const char* current;
@@ -15,25 +19,46 @@ void initScanner(const char* source) {
     scanner.line = 1;
 }
 
+/**
+ * Checks if the scanner has reached the end of the source string.
+ * @return 1 if at end, 0 otherwise.
+ */
 static int isAtEnd() {
     return *scanner.current == '\0';
 }
 
+/**
+ * Consumes the current character and advances the pointer.
+ * @return The character that was consumed.
+ */
 static char advance() {
     scanner.current++;
     return scanner.current[-1];
 }
 
+/**
+ * Returns the current character without consuming it (Lookahead 1).
+ * @return The current character or '\0' if at end.
+ */
 static char peek() {
     if (isAtEnd()) return '\0';
     return *scanner.current;
 }
 
+/**
+ * Returns the next character without consuming it (Lookahead 2).
+ * Used for detecting tokens like '..' vs number decimals.
+ * @return The next character.
+ */
 static char peekNext() {
     if (isAtEnd()) return '\0';
     return scanner.current[1]; 
 }
 
+/**
+ * Consumes the current character only if it matches the expected one.
+ * @return 1 if matched, 0 otherwise.
+ */
 static int match(char expected) {
     if (isAtEnd()) return 0;
     if (*scanner.current != expected) return 0;
@@ -41,6 +66,9 @@ static int match(char expected) {
     return 1;
 }
 
+/**
+ * Creates a token from the currently scanned characters.
+ */
 static Token makeToken(TokenType type) {
     Token token;
     token.type = type;
@@ -50,6 +78,9 @@ static Token makeToken(TokenType type) {
     return token;
 }
 
+/**
+ * Creates an error token with a message.
+ */
 static Token errorToken(const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
@@ -73,6 +104,10 @@ static int isAlphaNumeric(char c) {
     return isAlpha(c) || isDigit(c);
 }
 
+/**
+ * Checks if the current identifier matches a keyword using a Trie-like strategy.
+ * Verifies the remaining characters of a potential keyword.
+ */
 static TokenType checkKeyword(int start, int length, const char* rest, TokenType type) {
     if (scanner.current - scanner.start == start + length && 
         memcmp(scanner.start + start, rest, length) == 0) {
@@ -81,10 +116,20 @@ static TokenType checkKeyword(int start, int length, const char* rest, TokenType
     return TOKEN_IDENTIFIER;
 }
 
+/**
+ * Determines if the scanned identifier is a reserved keyword or a user variable.
+ */
 static TokenType identifierType() {
     switch (scanner.start[0]) {
         case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
-        case 'c': return checkKeyword(1, 4, "lass", TOKEN_CLASS);
+        case 'c': 
+            if (scanner.current - scanner.start > 1) {
+                switch (scanner.start[1]) {
+                    case 'l': return checkKeyword(2, 3, "ass", TOKEN_CLASS);
+                    case 'o': return checkKeyword(2, 3, "nst", TOKEN_CONST);
+                }
+            }
+            break;
         case 'e': return checkKeyword(1, 3, "lse", TOKEN_ELSE);
         case 'f':
             if (scanner.current - scanner.start > 1) {
@@ -96,6 +141,7 @@ static TokenType identifierType() {
             }
             break;
         case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
+        case 'l': return checkKeyword(1, 2, "et", TOKEN_LET);
         case 'n': return checkKeyword(1, 3, "ull", TOKEN_NULL);
         case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
         case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
@@ -115,20 +161,33 @@ static TokenType identifierType() {
     return TOKEN_IDENTIFIER;
 }
 
+/**
+ * Scans an alphanumeric identifier or keyword.
+ */
 static Token identifier() {
     while (isAlphaNumeric(peek())) advance();
     return makeToken(identifierType());
 }
 
+/**
+ * Scans a numeric literal (integer, float, or BigInt).
+ */
 static Token number() {
     while(isDigit(peek())) advance();
+
     if (peek() == '.' && isDigit(peekNext())) {
         advance();
         while (isDigit(peek())) advance();
+    } else if (peek() == 'n') {
+        advance();
+        return makeToken(TOKEN_BIGINT);
     }
     return makeToken(TOKEN_NUMBER);
 }
 
+/**
+ * Scans a string literal enclosed in double quotes.
+ */
 static Token string() {
     while (peek() != '"' && !isAtEnd()) {
         if (peek() == '\n') scanner.line++;
@@ -180,7 +239,7 @@ Token scanToken() {
     case '"': return string();
     case '/': if (match('/')) {
         while (peek() != '\n' && !isAtEnd()) advance();
-        return scanToken();
+        goto start_scanning;
     } else {
         return makeToken(TOKEN_SLASH);
     }    

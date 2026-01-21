@@ -3,6 +3,9 @@
 
 #include "common.h"
 
+/**
+ * @brief Enumeration of all possible token types in the language.
+ */
 typedef enum {
     // 1. Single Character Tokens
     TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
@@ -17,11 +20,11 @@ typedef enum {
     TOKEN_LESS, TOKEN_LESS_EQUAL,
     
     // 3. Literals
-    TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER,
+    TOKEN_IDENTIFIER, TOKEN_STRING, TOKEN_NUMBER, TOKEN_BIGINT,
 
     // 4. Keywords
-    TOKEN_AND, TOKEN_CLASS, TOKEN_ELSE, TOKEN_FALSE, 
-    TOKEN_FOR, TOKEN_FUN, TOKEN_IF, TOKEN_NULL, TOKEN_OR,
+    TOKEN_AND, TOKEN_CLASS, TOKEN_CONST, TOKEN_ELSE, TOKEN_FALSE, 
+    TOKEN_FOR, TOKEN_FUN, TOKEN_IF, TOKEN_LET, TOKEN_NULL, TOKEN_OR,
     TOKEN_PRINT, TOKEN_RETURN, TOKEN_SUPER, TOKEN_THIS, 
     TOKEN_TRUE, TOKEN_VAR, TOKEN_WHILE,
 
@@ -29,6 +32,10 @@ typedef enum {
     TOKEN_ERROR, TOKEN_EOF
 } TokenType;
 
+/**
+ * @brief Represents a single unit of code (lexeme).
+ * Contains the type, location in source, and length.
+ */
 typedef struct {
     TokenType type;
     const char* start; 

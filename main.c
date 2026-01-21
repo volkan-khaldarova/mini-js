@@ -1,14 +1,26 @@
 #include "common.h"
 #include "scanner.h"
+#include "value.h"
 
+/**
+ * @brief Entry point for the MiniJS interpreter.
+ * Currently runs tests for the Value system and the Scanner (Lexer).
+ */
 int main() {
-    char* source = "var isim = \"MiniJS\";\n"
-                   "var yas = 25;\n"
-                   "if (yas >= 18) {\n"
-                   "  print true;\n"
-                   "} else {\n"
-                   "  print false;\n"
-                   "}";
+    // --- 1. Value Modulu Testi (BigInt) ---
+    printf("=== 1. VALUE TEST (BigInt) ===\n");
+    JSValue myBigInt = createBIGINT(1234567890123456789LL);
+    printf("C tarafinda olusturulan BigInt: ");
+    printValue(myBigInt);
+    printf("\n");
+
+    // --- 2. Scanner Modulu Testi (let, const, 123n) ---
+    printf("=== 2. SCANNER TEST (Modern JS) ===\n");
+    char* source = "// Degisken tipleri ve BigInt testi\n"
+                   "var x = 10;\n"
+                   "let y = 20;\n"
+                   "const PI = 3.14159;\n"
+                   "var buyukSayi = 9876543210987654321n;";
     
     printf("Scanning Code:\n%s\n", source);
     printf("-------------------------\n");
