@@ -7,20 +7,20 @@
  * Currently runs tests for the Value system and the Scanner (Lexer).
  */
 int main() {
-    // --- 1. Value Modulu Testi (BigInt) ---
+    // --- 1. Value Module Test (BigInt) ---
     printf("=== 1. VALUE TEST (BigInt) ===\n");
     JSValue myBigInt = createBIGINT(1234567890123456789LL);
-    printf("C tarafinda olusturulan BigInt: ");
+    printf("BigInt created in C: ");
     printValue(myBigInt);
     printf("\n");
 
-    // --- 2. Scanner Modulu Testi (let, const, 123n) ---
+    // --- 2. Scanner Module Test (let, const, 123n) ---
     printf("=== 2. SCANNER TEST (Modern JS) ===\n");
-    char* source = "// Degisken tipleri ve BigInt testi\n"
+    char* source = "// Variable types and BigInt test\n"
                    "var x = 10;\n"
                    "let y = 20;\n"
                    "const PI = 3.14159;\n"
-                   "var buyukSayi = 9876543210987654321n;";
+                   "var bigNumber = 9876543210987654321n;";
     
     printf("Scanning Code:\n%s\n", source);
     printf("-------------------------\n");
