@@ -13,7 +13,7 @@ typedef enum {
     JS_STRING,
     JS_SYMBOL,
 
-    // --- Object (Referans) Tipleri ---
+    // --- Object (Reference) Types ---
     JS_OBJECT,
     JS_ARRAY,
     JS_DATE,
@@ -24,10 +24,13 @@ typedef enum {
     JS_FUNCTION
 } JSType;
 
+// [CONCEPT] Tagged Union:
+// JavaScript's dynamic nature is hidden here. 'type' tells the variable type,
+// 'union' shares the same memory space to hold the value of that type.
 typedef struct {
     JSType type;
 
-    union main
+    union
     {
         /* data */
         double number;
@@ -44,21 +47,31 @@ typedef struct {
 
 // --- AUXILIARY CREATION FUNCTIONS ---
 
-// 1. Undefined Generator
+/**
+ * Creates a JSValue representing 'undefined'.
+ * @return A JSValue with type JS_UNDEFINED.
+ */
 JSValue createUNDEFINED() {
     JSValue v;
     v.type = JS_UNDEFINED;
     return v;
 }
 
-// 2. NULL Generator
+/**
+ * Creates a JSValue representing 'null'.
+ * @return A JSValue with type JS_NULL.
+ */
 JSValue createNULL() {
     JSValue v;
     v.type = JS_NULL;
     return v;
 }
 
-// 3. BOOLEAN Oluşturucu
+/**
+ * Creates a JSValue representing a boolean.
+ * @param val 1 for true, 0 for false.
+ * @return A JSValue with type JS_BOOLEAN.
+ */
 JSValue createBOOLEAN(int val) {
     JSValue v;
     v.type = JS_BOOLEAN;
@@ -66,7 +79,11 @@ JSValue createBOOLEAN(int val) {
     return v;
 }
 
-// 4. NUMBER Oluşturucu
+/**
+ * Creates a JSValue representing a number.
+ * @param val The double precision floating point value.
+ * @return A JSValue with type JS_NUMBER.
+ */
 JSValue createNUMBER(double val) {
     JSValue v;
     v.type = JS_NUMBER;
@@ -74,7 +91,12 @@ JSValue createNUMBER(double val) {
     return v;
 }
 
-// 5. STRING Generator
+/**
+ * Creates a JSValue representing a string.
+ * Duplicates the input string using strdup.
+ * @param val The C-string to wrap.
+ * @return A JSValue with type JS_STRING.
+ */
 JSValue createSTRING(char* val) {
     JSValue v;
     v.type = JS_STRING;
@@ -82,7 +104,12 @@ JSValue createSTRING(char* val) {
     return v;
 }
 
-// Function that prints the value to the screen
+/**
+ * Prints the value of a JSValue to the standard output.
+ * Similar to console.log in JS.
+ * 
+ * @param v The JSValue to be printed.
+ */
 void printValue(JSValue v) {
     switch (v.type)
     {
@@ -130,7 +157,11 @@ void printValue(JSValue v) {
     printf("\n");
 }
 
-// Function that cleans the memory (Manual Garbage Collection)
+/**
+ * Frees the memory allocated for a JSValue.
+ * Handles manual garbage collection for dynamic types like String.
+ * @param v The JSValue to free.
+ */
 void freeValue(JSValue v) {
     if (v.type == JS_STRING) {
         free(v.as.string);
@@ -185,6 +216,8 @@ typedef struct {
 } Token;
 
 // --- THE SCANNER ---
+// [MECHANISM] Two Pointers:
+// 'start' points to the beginning of the current lexeme, 'current' moves forward to find the end.
 typedef struct {
     const char* start;
     const char* current;
@@ -194,31 +227,50 @@ typedef struct {
 // We create a global scanner instance
 Scanner scanner;
 
-// Function to reset the scanner
+/**
+ * Initializes the scanner with the source code.
+ * Sets the start and current pointers to the beginning.
+ * @param source The source code string (must be null-terminated).
+ */
 void initScanner(const char* source) {
     scanner.start = source;
     scanner.current = source;
     scanner.line = 1;
 }
 
-// 1. Check if we reached the end of the code
+/**
+ * Checks if the scanner has reached the end of the source code.
+ * @return 1 if at end (null terminator), 0 otherwise.
+ */
 int isAtEnd() {
     return *scanner.current == '\0';
 }
 
-// 2. Read the current character and move to the next one
+/**
+ * Consumes the current character and advances the scanner pointer.
+ * @return The character that was consumed.
+ */
 char advance() {
     scanner.current++;
     return scanner.current[-1];
 }
 
-// Look ahead but don't consume (Simdilik kullanilmiyor ama string/number icin gerekecek)
+/**
+ * Returns the current character without consuming it.
+ * Used for lookahead.
+ * @return The current character.
+ */
 char peek() {
     if (isAtEnd()) return '\0';
     return *scanner.current;
 }
 
-// Conditional advance (for two-char tokens like !=, ==)
+/**
+ * Consumes the current character only if it matches the expected one.
+ * Used for two-character tokens like '!=' or '=='.
+ * @param expected The character to match.
+ * @return 1 if matched and consumed, 0 otherwise.
+ */
 int match(char expected) {
     if (isAtEnd()) return 0;
     if (*scanner.current != expected) return 0;
@@ -226,22 +278,51 @@ int match(char expected) {
     return 1;
 }
 
+/**
+ * Returns the character after the current one without consuming.
+ * Used for 2-character lookahead (e.g. detecting numbers with decimals).
+ * @return The next character.
+ */
 char peekNext() {
     if (isAtEnd()) return '\0';
     return scanner.current[1]; 
 }
 
+/**
+ * Checks if a character is a digit (0-9).
+ * @param c The character to check.
+ * @return 1 if digit, 0 otherwise.
+ */
 int isDigit(char c) {
     return c >= '0' && c <= '9';
 }
 
+/**
+ * Checks if a character is an alphabet letter or underscore.
+ * @param c The character to check.
+ * @return 1 if alpha, 0 otherwise.
+ */
 int isAlpha(char c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
             c == '_';
 }
 
-// 3. Create a Token (The "Pointer" logic)
+/**
+ * Checks if a character is alphanumeric (letter, digit, or underscore).
+ * @param c The character to check.
+ * @return 1 if alphanumeric, 0 otherwise.
+ */
+int isAlphaNumeric(char c) {
+    return isAlpha(c) || isDigit(c);
+}
+
+/**
+ * Creates a Token structure based on the current scanner state.
+ * Calculates length automatically using pointer arithmetic.
+ * 
+ * @param type The TokenType (e.g., TOKEN_NUMBER, TOKEN_PLUS).
+ */
 Token makeToken(TokenType type) {
     Token token;
     token.type = type;
@@ -251,7 +332,11 @@ Token makeToken(TokenType type) {
     return token;
 }
 
-// Create an Error Token
+/**
+ * Creates a special token representing a syntax error.
+ * @param message The error message to store in the token.
+ * @return A Token with type TOKEN_ERROR.
+ */
 Token errorToken(const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
@@ -261,6 +346,11 @@ Token errorToken(const char* message) {
     return token;
 }
 
+/**
+ * Scans a string literal enclosed in double quotes.
+ * Handles multi-line strings by updating the line counter.
+ * @return A Token with type TOKEN_STRING.
+ */
 Token string() {
 
     while (peek() != '"' && !isAtEnd()) {
@@ -277,6 +367,10 @@ Token string() {
     return makeToken(TOKEN_STRING);
  }
 
+/**
+ * Scans a number literal (integer or floating point).
+ * @return A Token with type TOKEN_NUMBER.
+ */
 Token number() {
     while(isDigit(peek())) advance();
 
@@ -289,9 +383,83 @@ Token number() {
     return makeToken(TOKEN_NUMBER);
 }
 
+/**
+ * Checks if the current identifier matches a specific keyword.
+ * [LOGIC] Uses a Trie-like check (checking rest of string) for efficiency.
+ * @param start Offset from token start.
+ * @param length Length of remaining string.
+ * @param rest Expected remaining string.
+ * @param type Token type to return if matched.
+ * @return The keyword TokenType or TOKEN_IDENTIFIER.
+ */
+TokenType checkKeyword(int start, int length, const char* rest, TokenType type) {
+    if (scanner.current - scanner.start == start + length && 
+        memcmp(scanner.start + start, rest, length) == 0) {
+        return type;
+    }
+    return TOKEN_IDENTIFIER;
+}
+
+/**
+ * Determines the type of the identifier (keyword or variable name).
+ * @return The specific keyword TokenType or TOKEN_IDENTIFIER.
+ */
+TokenType identifierType() {
+
+    switch (scanner.start[0]) {
+        case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
+        case 'c': return checkKeyword(1, 4, "lass", TOKEN_CLASS);
+        case 'e': return checkKeyword(1, 3, "lse", TOKEN_ELSE);
+        case 'f':
+            if (scanner.current - scanner.start > 1) {
+                switch (scanner.start[1]) {
+                    case 'a': return checkKeyword(2, 3, "lse", TOKEN_FALSE);
+                    case 'o': return checkKeyword(2, 1, "r", TOKEN_FOR);
+                    case 'u': return checkKeyword(2, 1, "n", TOKEN_FUN);
+                }
+            }
+            break;
+        case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
+        case 'n': return checkKeyword(1, 3, "ull", TOKEN_NULL);
+        case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
+        case 'p': return checkKeyword(1, 4, "rint", TOKEN_PRINT);
+        case 'r': return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
+        case 's': return checkKeyword(1, 4, "uper", TOKEN_SUPER);
+        case 't':
+            if(scanner.current - scanner.start > 1) {
+                switch(scanner.start[1]) {
+                    case 'h': return checkKeyword(2, 2, "is", TOKEN_THIS);
+                    case 'r': return checkKeyword(2, 2, "ue", TOKEN_TRUE);
+                }
+            }
+            break;
+        case 'v': return checkKeyword(1, 2, "ar", TOKEN_VAR);
+        case 'w': return checkKeyword(1, 4, "hile", TOKEN_WHILE);
+    }
+
+    return TOKEN_IDENTIFIER;
+}
+
+/**
+ * Scans an identifier or keyword.
+ * @return A Token representing the identifier/keyword.
+ */
+Token identifier() {
+    while (isAlphaNumeric(peek())) advance();
+    
+    return makeToken(identifierType());
+}
+
+/**
+ * Scans the next token from the source code.
+ * Skips whitespace and comments automatically.
+ * @return The next Token found.
+ */
 Token scanToken() {
     // 1. Skip Whitespace (Spaces, tabs, newlines)
     // We loop until we find a real character
+    // [STEP 1] Skip Unnecessary Characters:
+    // Spaces, tabs, and newlines do not affect the logic, we consume them.
     for(;;) {
         char c = *scanner.current;
         switch (c)
@@ -312,6 +480,8 @@ Token scanToken() {
 
     start_scanning:
 
+    // [STEP 2] Token Capture:
+    // We set 'start' to the current position to select the new lexeme from here.
     scanner.start = scanner.current;
 
     if(isAtEnd()) return makeToken(TOKEN_EOF);
@@ -331,6 +501,7 @@ Token scanToken() {
     case '+': return makeToken(TOKEN_PLUS);
     case '*': return makeToken(TOKEN_STAR);
     case '"': return string();
+    // Comment check: If // go until the end of the line.
     case '/': if (match('/')) {
         while (peek() != '\n' && !isAtEnd()) advance();
         return scanToken();
@@ -339,6 +510,7 @@ Token scanToken() {
     }    
 
     // Two-character tokens
+    // [STEP 3] Two-Character Check (like !=, ==):
     case '!':
         return makeToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
     case '=':
@@ -350,8 +522,11 @@ Token scanToken() {
     
     default:
 
+        // [STEP 4] Literals (Numbers and Words):
         if (isDigit(c)) {
             return number();
+        } else if (isAlpha(c)) {
+            return identifier();
         }
 
         return errorToken("Unexpected character.");
@@ -360,28 +535,31 @@ Token scanToken() {
 
 
 int main() {
-    // Test: Sayılar ve Stringler
-    // 'var' hala hata verecek çünkü Identifier eklemedik.
-    // Ama sayılar ve stringler çalışmalı.
-    char* source = "123 45.67 \"Merhaba\""; 
+    char* source = "var isim = \"MiniJS\";\n"
+                   "var yas = 25;\n"
+                   "if (yas >= 18) {\n"
+                   "  print true;\n"
+                   "} else {\n"
+                   "  print false;\n"
+                   "}";
     
-    printf("Scanning code:\n%s\n", source);
+    printf("Scanning Code:\n%s\n", source);
     printf("-------------------------\n");
 
     initScanner(source);
-    
+
     int line = -1;
     for (;;) {
         Token token = scanToken();
+        
         if (token.line != line) {
             printf("%4d ", token.line);
             line = token.line;
         } else {
             printf("   | ");
         }
-        
-        // Token tipini (enum ID) ve içeriğini (lexeme) yazdır
-        printf("%2d '%.*s'\n", token.type, token.length, token.start);
+
+        printf("Type: %2d, Text: '%.*s'\n", token.type, token.length, token.start);
 
         if (token.type == TOKEN_EOF) break;
     }
