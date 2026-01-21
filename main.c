@@ -226,6 +226,21 @@ int match(char expected) {
     return 1;
 }
 
+char peekNext() {
+    if (isAtEnd()) return '\0';
+    return scanner.current[1]; 
+}
+
+int isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+int isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+            c == '_';
+}
+
 // 3. Create a Token (The "Pointer" logic)
 Token makeToken(TokenType type) {
     Token token;
@@ -244,6 +259,34 @@ Token errorToken(const char* message) {
     token.length = (int)strlen(message);
     token.line = scanner.line;
     return token;
+}
+
+Token string() {
+
+    while (peek() != '"' && !isAtEnd()) {
+        if (peek() == '\n') scanner.line++;
+        advance();
+    }
+
+    if (isAtEnd()) {
+        return errorToken("Unterminated string.");
+    }
+
+    advance();
+
+    return makeToken(TOKEN_STRING);
+ }
+
+Token number() {
+    while(isDigit(peek())) advance();
+
+    if (peek() == '.' && isDigit(peekNext())) {
+        advance();
+
+        while (isDigit(peek())) advance();
+    }
+
+    return makeToken(TOKEN_NUMBER);
 }
 
 Token scanToken() {
@@ -286,8 +329,14 @@ Token scanToken() {
     case '.': return makeToken(TOKEN_DOT);
     case '-': return makeToken(TOKEN_MINUS);
     case '+': return makeToken(TOKEN_PLUS);
-    case '/': return makeToken(TOKEN_SLASH);
     case '*': return makeToken(TOKEN_STAR);
+    case '"': return string();
+    case '/': if (match('/')) {
+        while (peek() != '\n' && !isAtEnd()) advance();
+        return scanToken();
+    } else {
+        return makeToken(TOKEN_SLASH);
+    }    
 
     // Two-character tokens
     case '!':
@@ -300,33 +349,39 @@ Token scanToken() {
         return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
     
     default:
+
+        if (isDigit(c)) {
+            return number();
+        }
+
         return errorToken("Unexpected character.");
     }
 }
 
 
 int main() {
-    // Our fake source code
-    char* source = "({ + - ; })";
+    // Test: Sayılar ve Stringler
+    // 'var' hala hata verecek çünkü Identifier eklemedik.
+    // Ama sayılar ve stringler çalışmalı.
+    char* source = "123 45.67 \"Merhaba\""; 
     
-    printf("Scanning code: %s\n", source);
+    printf("Scanning code:\n%s\n", source);
     printf("-------------------------\n");
 
     initScanner(source);
-
-    // Loop until we hit the End of File (EOF)
+    
     int line = -1;
     for (;;) {
         Token token = scanToken();
-        
         if (token.line != line) {
-            printf("%4d ", token.line); // Print line number only if it changes
+            printf("%4d ", token.line);
             line = token.line;
         } else {
             printf("   | ");
         }
-
-        printf("Token Type: %d, Text: '%.*s'\n", token.type, token.length, token.start);
+        
+        // Token tipini (enum ID) ve içeriğini (lexeme) yazdır
+        printf("%2d '%.*s'\n", token.type, token.length, token.start);
 
         if (token.type == TOKEN_EOF) break;
     }
