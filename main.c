@@ -1,15 +1,28 @@
+/**
+ * @file main.c
+ * @brief Entry point for the MiniJS interpreter / Aura language test harness.
+ *
+ * Currently serves as a test driver to verify the functionality of the Value system
+ * (specifically BigInt and Tensors) and the Scanner (Lexer) correctness.
+ */
+
 #include "common.h"
 #include "scanner.h"
 #include "value.h"
 
 /**
- * @brief Entry point for the MiniJS interpreter.
- * Currently runs tests for the Value system and the Scanner (Lexer).
+ * @brief Main execution entry point.
+ *
+ * Runs a sequence of tests:
+ * 1. Creates and prints a BigInt value.
+ * 2. Scans a sample source string containing modern JS/Aura syntax and prints tokens.
+ *
+ * @return 0 on successful execution.
  */
 int main() {
     // --- 1. Value Module Test (BigInt) ---
     printf("=== 1. VALUE TEST (BigInt) ===\n");
-    JSValue myBigInt = createBIGINT(1234567890123456789LL);
+    AuraValue myBigInt = createBIGINT(1234567890123456789LL);
     printf("BigInt created in C: ");
     printValue(myBigInt);
     printf("\n");
@@ -25,11 +38,12 @@ int main() {
     printf("Scanning Code:\n%s\n", source);
     printf("-------------------------\n");
 
-    initScanner(source);
+    Scanner scanner;
+    initScanner(&scanner, source);
 
     int line = -1;
     for (;;) {
-        Token token = scanToken();
+        Token token = scanToken(&scanner);
         
         if (token.line != line) {
             printf("%4d ", token.line);
@@ -38,7 +52,7 @@ int main() {
             printf("   | ");
         }
 
-        printf("Type: %2d, Text: '%.*s'\n", token.type, token.length, token.start);
+        printf("Type: %2d, Text: '%.*s'\n", token.type, (int)token.length, token.start);
 
         if (token.type == TOKEN_EOF) break;
     }

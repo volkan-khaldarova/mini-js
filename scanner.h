@@ -1,10 +1,21 @@
 #ifndef minijs_scanner_h
 #define minijs_scanner_h
 
+/**
+ * @file scanner.h
+ * @brief Defines the lexical analyzer (scanner) for the Aura language.
+ *
+ * The scanner is responsible for converting raw source code strings into a stream
+ * of tokens. It handles keyword recognition, literal parsing, and basic error detection.
+ */
+
 #include "common.h"
 
 /**
  * @brief Enumeration of all possible token types in the language.
+ *
+ * Categorizes tokens into single-character punctuation, operators, literals,
+ * keywords, and special control tokens.
  */
 typedef enum {
     // 1. Single Character Tokens
@@ -34,25 +45,50 @@ typedef enum {
 
 /**
  * @brief Represents a single unit of code (lexeme).
- * Contains the type, location in source, and length.
+ *
+ * A token views a slice of the source code. It does not own the string data;
+ * it points to the start in the source string and stores the length.
  */
 typedef struct {
     TokenType type;
     const char* start; 
-    int length;
+    size_t length;
     int line;
 } Token;
 
 /**
- * Initializes the scanner with the source code.
- * @param source The source code string.
+ * @brief Internal state of the scanner.
+ *
+ * Maintains the current position in the source string and line tracking.
+ * Exposed in the header to allow stack allocation, enabling thread safety
+ * and reentrancy (multiple scanners running in parallel).
  */
-void initScanner(const char* source);
+typedef struct {
+    const char* start;
+    const char* current;
+    int line;
+} Scanner;
+
+/**
+ * Initializes the scanner with the source code.
+ *
+ * Sets up the scanner state to begin processing the provided source string.
+ *
+ * @param scanner Pointer to the scanner instance.
+ * @param source The null-terminated source code string.
+ */
+void initScanner(Scanner* scanner, const char* source);
 
 /**
  * Scans the next token from the source code.
- * @return The next Token found.
+ *
+ * Advances the scanner through the source code until a complete token is formed
+ * or an error is encountered.
+ *
+ * @param scanner Pointer to the scanner instance.
+ * @return The next Token found in the stream.
+ * @complexity O(L) where L is the length of the token (amortized O(1) relative to source length).
  */
-Token scanToken();
+Token scanToken(Scanner* scanner);
 
 #endif
