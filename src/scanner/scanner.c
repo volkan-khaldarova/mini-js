@@ -288,6 +288,7 @@ static Token string(Scanner* scanner) {
  * @return The next Token.
  */
 Token scanToken(Scanner* scanner) {
+    scan_next:
     for(;;) {
         char c = *scanner->current;
         switch (c)
@@ -328,7 +329,7 @@ Token scanToken(Scanner* scanner) {
     case '"': return string(scanner);
     case '/': if (match(scanner, '/')) {
         while (peek(scanner) != '\n' && !isAtEnd(scanner)) advance(scanner);
-        goto start_scanning;
+        goto scan_next;
     } else {
         return makeToken(scanner, TOKEN_SLASH);
     }    
