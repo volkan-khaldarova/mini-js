@@ -19,8 +19,6 @@
  * @param source The source code string to scan.
  */
 void initScanner(Scanner* scanner, const char* source) {
-    /* SECURITY FIX: Handle NULL source input gracefully.
-       Prevent Segmentation Fault in scanToken by defaulting to empty string. */
     if (source == NULL) {
         source = "";
     }
